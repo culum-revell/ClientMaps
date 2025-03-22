@@ -1,7 +1,7 @@
 var size = 0;
 var placement = 'point';
 
-var style_maingeojson_3 = function(feature, resolution){
+var style_maingeojson_4 = function(feature, resolution){
     var context = {
         feature: feature,
         variables: {}
