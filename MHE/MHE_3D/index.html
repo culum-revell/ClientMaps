@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D Model Viewer</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.150.0/build/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.150.0/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.150.0/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.150.0/examples/jsm/loaders/GLTFLoader.js';
+
+    let scene, camera, renderer, controls;
+    let model = null;          // Loaded model
+    let cameraDistance = 5;    // Computed after model load
+    let currentAngle = 0;      // Determines preset camera position (in radians)
+    let marker = null;         // Axis marker for new orbit target
+
+    init();
+    animate();
+
+    function init() {
+      // Create scene and set background
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xaaaaaa);
+
+      // Create perspective camera
+      camera = new THREE.PerspectiveCamera(
+        75, 
+        window.innerWidth / window.innerHeight, 
+        0.1, 
+        1000
+      );
+
+      // Create renderer and add to document
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Set up OrbitControls
+      controls = new OrbitControls(camera, renderer.domElement);
+
+      // --- Lighting Setup ---
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 5.0);
+      hemiLight.position.set(0, 200, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7.5);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      // Load GLB model
+      const loader = new GLTFLoader();
+      loader.load(
+        './models/MHE_RGB.glb',
+        function (gltf) {
+          model = gltf.scene;
+          scene.add(model);
+          centerAndFrameModel(model);
+          // Set initial preset view (South view) with no roll.
+          currentAngle = 0;
+          updateCamera();
+        },
+        function (xhr) {
+          console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        },
+        function (error) {
+          console.error('An error occurred while loading the model', error);
+        }
+      );
+
+      window.addEventListener('resize', onWindowResize, false);
+      window.addEventListener('keydown', onKeyDown, false);
+      renderer.domElement.addEventListener('dblclick', onDoubleClick, false);
+    }
+
+    // Centers the model at the origin and computes a good camera distance.
+    function centerAndFrameModel(model) {
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      model.position.sub(center);
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fovRadians = camera.fov * (Math.PI / 180);
+      cameraDistance = (maxDim / (2 * Math.tan(fovRadians / 2))) * 1.2;
+    }
+
+    // Updates camera position based on currentAngle and resets its orientation.
+    function updateCamera() {
+      // Position camera on XZ circle based on currentAngle.
+      camera.position.x = cameraDistance * Math.sin(currentAngle);
+      camera.position.z = cameraDistance * Math.cos(currentAngle);
+      camera.position.y = 0;
+      
+      // Ensure the camera is looking at the orbit target.
+      camera.lookAt(controls.target);
+      
+      // Update OrbitControls target (if needed).
+      controls.update();
+      
+      // Rotate model so its front remains aligned relative to the viewer.
+      if (model) {
+        model.rotation.y = -currentAngle;
+      }
+    }
+
+    // Rolls the camera by delta radians using quaternion multiplication.
+    function rollCamera(delta) {
+      // Compute the forward axis (from camera to orbit target).
+      const forward = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      // Create a quaternion representing a roll rotation around the forward axis.
+      const q = new THREE.Quaternion();
+      q.setFromAxisAngle(forward, delta);
+      // Pre-multiply the camera's current quaternion with the roll quaternion.
+      camera.quaternion.premultiply(q);
+      // Update OrbitControls' up vector to match the new camera orientation.
+      camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion);
+      controls.up0.copy(camera.up);
+      // Reapply lookAt to ensure the camera continues to face the target.
+      camera.lookAt(controls.target);
+      controls.update();
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Handle keydown events for preset views and rolling.
+    function onKeyDown(event) {
+      switch (event.code) {
+        case 'Numpad2':  // South view: camera along +Z
+          currentAngle = 0;
+          updateCamera();
+          break;
+        case 'Numpad4':  // East view: camera along +X
+          currentAngle = Math.PI / 2;
+          updateCamera();
+          break;
+        case 'Numpad6':  // West view: camera along -X
+          currentAngle = -Math.PI / 2;
+          updateCamera();
+          break;
+        case 'Numpad0':  // North view: camera along -Z
+          currentAngle = Math.PI;
+          updateCamera();
+          break;
+        case 'ArrowLeft':
+          event.preventDefault();
+          // Roll counterclockwise by 0.1 radians.
+          rollCamera(0.1);
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          // Roll clockwise by 0.1 radians.
+          rollCamera(-0.1);
+          break;
+        default:
+          break;
+      }
+    }
+
+    // Handle double-click events: update orbit target and place a marker.
+    function onDoubleClick(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(model, true);
+
+      if (intersects.length > 0) {
+        const point = intersects[0].point;
+        // Update OrbitControls target.
+        controls.target.copy(point);
+        // Reposition camera to maintain distance.
+        const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+        camera.position.copy(point).addScaledVector(dir, cameraDistance);
+        // Place or update marker.
+        placeMarker(point);
+        // Reapply camera orientation.
+        camera.lookAt(controls.target);
+        controls.update();
+      }
+    }
+
+    // Places an axis marker at the specified position (size increased to 10).
+    function placeMarker(position) {
+      if (marker) {
+        scene.remove(marker);
+      }
+      marker = new THREE.AxesHelper(10);
+      marker.position.copy(position);
+      scene.add(marker);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>
