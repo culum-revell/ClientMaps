@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Profile Quoting System</title>
+  <style>
+    /* Basic styling for layout and readability */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+    header {
+      background: #333;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: #fff;
+      padding: 2rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    form input, form button, form select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    section {
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header with a placeholder snake line -->
+  <header>
+    <h1 id="headerTitle">Solar Profile Quoting System</h1>
+    <svg id="snakeLine" width="100%" height="50" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 25 Q 50 0, 100 25 T 200 25 T 300 25 T 400 25" stroke="white" fill="transparent" stroke-width="2"/>
+    </svg>
+  </header>
+
+  <div class="container">
+    <!-- Input Form Section -->
+    <section class="input-form">
+      <h2>Enter Your Details</h2>
+      <form id="solarForm">
+        <label for="electricityBill">Electricity Bill ($):</label>
+        <input type="number" id="electricityBill" name="electricityBill" required />
+        <label for="location">Location:</label>
+        <input type="text" id="location" name="location" required />
+        <button type="submit">Calculate</button>
+      </form>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results">
+      <h2>Results</h2>
+      <div id="resultsContent">
+        <!-- Dynamic results will be inserted here -->
+      </div>
+    </section>
+
+    <!-- Example Quote Section -->
+    <section class="quote">
+      <h2>Example Quote</h2>
+      <p id="quoteContent">Your solar panel configuration will appear here as a quote.</p>
+    </section>
+
+    <!-- Contact Us Section -->
+    <section class="contact">
+      <h2>Contact Us</h2>
+      <form id="contactForm">
+        <label for="contactName">Name:</label>
+        <input type="text" id="contactName" name="contactName" required />
+        <label for="contactEmail">Email:</label>
+        <input type="email" id="contactEmail" name="contactEmail" required />
+        <label for="contactMessage">Message:</label>
+        <textarea id="contactMessage" name="contactMessage" rows="4" required></textarea>
+        <button type="submit">Send Message</button>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    // JavaScript to handle form submission and dynamic updates
+
+    // Listen for the main solar form submission
+    document.getElementById('solarForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      var bill = document.getElementById('electricityBill').value;
+      var location = document.getElementById('location').value;
+
+      // Placeholder calculation for solar requirements
+      var solarRequirement = (bill * 0.2).toFixed(2);
+
+      // Update the results section with a dynamic message
+      document.getElementById('resultsContent').innerHTML = 
+        '<p>Based on an electricity bill of $' + bill + ' in ' + location + ', you might need approximately ' + solarRequirement + ' kW of solar panels.</p>';
+
+      // Dynamically update the header title with the user's location
+      document.getElementById('headerTitle').textContent = 'Solar Profile for ' + location;
+
+      // Update the example quote section with a modular quote
+      document.getElementById('quoteContent').innerHTML = 
+        '<strong>Quote:</strong> For ' + location + ', we recommend our modular solar panel package starting at $' + (solarRequirement * 1000).toFixed(2);
+    });
+
+    // Handle the contact form submission
+    document.getElementById('contactForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      alert('Thank you for contacting us! We will get back to you soon.');
+      // Optionally, clear the form fields after submission
+      document.getElementById('contactForm').reset();
+    });
+  </script>
+</body>
+</html>
