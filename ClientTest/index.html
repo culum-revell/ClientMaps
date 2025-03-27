@@ -83,12 +83,11 @@
           <!-- 5) Half Winter (end) = 437.5 to 500 -->
           <rect x="437.5" y="10" width="62.5" height="80" fill="blue" fill-opacity="0.5"/>
 
-          <!-- Season labels above the boxes. We have two half-Winters, so two Winter labels. -->
-          <!-- They are placed at y=8 (above the boxes). Text color matches the box. -->
-          <text x="31.25" y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
-          <text x="125"   y="8" font-size="12" text-anchor="middle" fill="green">Spring</text>
-          <text x="250"   y="8" font-size="12" text-anchor="middle" fill="orange">Summer</text>
-          <text x="375"   y="8" font-size="12" text-anchor="middle" fill="red">Autumn</text>
+          <!-- Season labels above the boxes. Two half-Winters => two Winter labels. -->
+          <text x="31.25"  y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
+          <text x="125"    y="8" font-size="12" text-anchor="middle" fill="green">Spring</text>
+          <text x="250"    y="8" font-size="12" text-anchor="middle" fill="orange">Summer</text>
+          <text x="375"    y="8" font-size="12" text-anchor="middle" fill="red">Autumn</text>
           <text x="468.75" y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
 
           <!-- Paths for cost and solar curves -->
@@ -239,6 +238,16 @@
       return d;
     }
 
+    /**
+     * Simple function to force the last point's Y to match the first point's Y.
+     * This ensures the wave lines up exactly in vertical position from copy to copy.
+     */
+    function forceEndToMatchStart(points) {
+      if (points.length < 2) return points;
+      points[points.length - 1].y = points[0].y; 
+      return points;
+    }
+
     // Update the header chart with combined cost and solar curves plus data labels.
     // We start in the middle of the first Winter box (x=31.25) and end in the middle
     // of the last Winter box (x=468.75). Then we add a final point at x=31.25+500=531.25
@@ -246,8 +255,7 @@
     function updateHeaderChart() {
       // X positions for the 5 main season centers (partial winter at start, spring, summer, autumn, partial winter at end):
       const mainCenters = [31.25, 125, 250, 375, 468.75];
-      // A final duplication of the first point + 500 = 31.25 + 500 = 531.25
-      // ensures that when the chart scrolls, the end of the first copy lines up with the start of the second.
+      // A final duplication of the first point + 500 => 31.25 + 500 = 531.25
       const extendedCenters = mainCenters.concat([31.25 + 500]);
 
       // Build data arrays for cost & solar
@@ -265,26 +273,33 @@
         userData.solarRequirements.autumn,
         userData.solarRequirements.winter
       ];
-      // Append the duplicate first point
+      // Append the duplicate first data
       costData.push(userData.winterCost);
       solarData.push(userData.solarRequirements.winter);
 
-      // For vertical scaling, let's treat the entire viewBox as 100 in height
-      // minus a small top/bottom margin so we don't clip the line.
+      // We expand margins so big labels aren't clipped
       const height = 100;
-      const marginTop = 10, marginBottom = 10;
+      const marginTop = 20;  // more space on top for large labels
+      const marginBottom = 10;
       const plotHeight = height - marginTop - marginBottom;
+
       // Max across both data sets
       const maxVal = Math.max(...costData, ...solarData);
 
+      // Create points for cost & solar
       let costPoints = [], solarPoints = [];
       for (let i = 0; i < extendedCenters.length; i++) {
         const x = extendedCenters[i];
+        // Invert so higher values appear lower in the SVG
         const yCost = marginTop + (plotHeight - (costData[i] / maxVal * plotHeight));
         const ySolar = marginTop + (plotHeight - (solarData[i] / maxVal * plotHeight));
         costPoints.push({ x, y: yCost });
         solarPoints.push({ x, y: ySolar });
       }
+
+      // Force the last point to have the same Y as the first
+      costPoints = forceEndToMatchStart(costPoints);
+      solarPoints = forceEndToMatchStart(solarPoints);
 
       // Generate smooth paths
       const costPathStr = generateSmoothPath(costPoints);
@@ -302,20 +317,22 @@
       // Add data labels for each of the 5 main season points (not the final duplicate)
       const svgNS = "http://www.w3.org/2000/svg";
       for (let i = 0; i < mainCenters.length; i++) {
-        // Cost label (above)
+        // Cost label (above the point)
         const costLabel = document.createElementNS(svgNS, "text");
         costLabel.setAttribute("x", costPoints[i].x.toString());
-        costLabel.setAttribute("y", (costPoints[i].y - 5).toString());
+        // Move label up a bit more so it doesn't collide with large data
+        costLabel.setAttribute("y", (costPoints[i].y - 10).toString());
         costLabel.setAttribute("font-size", "10");
         costLabel.setAttribute("fill", "steelblue");
         costLabel.setAttribute("text-anchor", "middle");
         costLabel.textContent = costData[i].toString();
         labelsGroup.appendChild(costLabel);
 
-        // Solar label (below)
+        // Solar label (below the point)
         const solarLabel = document.createElementNS(svgNS, "text");
         solarLabel.setAttribute("x", solarPoints[i].x.toString());
-        solarLabel.setAttribute("y", (solarPoints[i].y + 15).toString());
+        // Move label down a bit more
+        solarLabel.setAttribute("y", (solarPoints[i].y + 20).toString());
         solarLabel.setAttribute("font-size", "10");
         solarLabel.setAttribute("fill", "tomato");
         solarLabel.setAttribute("text-anchor", "middle");
