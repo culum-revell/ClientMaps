@@ -2,123 +2,340 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Solar Profile Quoting System</title>
   <style>
-    /* Basic styling for layout and readability */
+    /* Basic page styling */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
       background: #f5f5f5;
     }
+    /* Header styling */
     header {
+      position: relative;
       background: #333;
       color: #fff;
-      padding: 1rem;
-      text-align: center;
+      overflow: hidden;
     }
+    /* Animated SVG header chart */
+    #headerChart {
+      display: block;
+      width: 100%;
+      height: 120px; /* Adjust height as needed */
+    }
+    /* Scrolling group that duplicates the content */
+    .scrolling {
+      animation: scroll 15s linear infinite; /* 15s for slower scroll */
+    }
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-500px); }
+    }
+    /* Page title positioned below the animated chart */
+    #pageTitle {
+      text-align: center;
+      padding: 0.5rem;
+      background: #444;
+      font-size: 1.5rem;
+    }
+    /* Container for multi-step content */
     .container {
       max-width: 800px;
       margin: 2rem auto;
       background: #fff;
       padding: 2rem;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    form input, form button, form select {
+    section {
+      display: none;
+    }
+    section.active {
+      display: block;
+    }
+    input, button, select, textarea {
       width: 100%;
       padding: 0.5rem;
       margin-bottom: 1rem;
     }
-    section {
-      margin-top: 2rem;
-    }
   </style>
 </head>
 <body>
-  <!-- Header with a placeholder snake line -->
+  <!-- Header: Animated chart on top, then page title -->
   <header>
-    <h1 id="headerTitle">Solar Profile Quoting System</h1>
-    <svg id="snakeLine" width="100%" height="50" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0 25 Q 50 0, 100 25 T 200 25 T 300 25 T 400 25" stroke="white" fill="transparent" stroke-width="2"/>
+    <svg id="headerChart" viewBox="0 0 500 100" preserveAspectRatio="none">
+      <defs>
+        <!-- We define partial and full season boxes so that Winter is split. -->
+        <!-- Each "half" of Winter is 62.5px, while Spring/Summer/Autumn are 125px. -->
+        <!-- This way the line can start in mid-Winter (x=31.25) and end in mid-Winter (x=468.75). -->
+        
+        <!-- Colors: winter=blue, spring=green, summer=orange, autumn=red -->
+        <g id="chartContent">
+          <!-- 1) Half Winter (start) = 0 to 62.5 -->
+          <rect x="0" y="10" width="62.5" height="80" fill="blue" fill-opacity="0.5"/>
+          <!-- 2) Spring = 62.5 to 187.5 -->
+          <rect x="62.5" y="10" width="125" height="80" fill="green" fill-opacity="0.5"/>
+          <!-- 3) Summer = 187.5 to 312.5 -->
+          <rect x="187.5" y="10" width="125" height="80" fill="orange" fill-opacity="0.5"/>
+          <!-- 4) Autumn = 312.5 to 437.5 -->
+          <rect x="312.5" y="10" width="125" height="80" fill="red" fill-opacity="0.5"/>
+          <!-- 5) Half Winter (end) = 437.5 to 500 -->
+          <rect x="437.5" y="10" width="62.5" height="80" fill="blue" fill-opacity="0.5"/>
+
+          <!-- Season labels above the boxes. We have two half-Winters, so two Winter labels. -->
+          <!-- They are placed at y=8 (above the boxes). Text color matches the box. -->
+          <text x="31.25" y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
+          <text x="125"   y="8" font-size="12" text-anchor="middle" fill="green">Spring</text>
+          <text x="250"   y="8" font-size="12" text-anchor="middle" fill="orange">Summer</text>
+          <text x="375"   y="8" font-size="12" text-anchor="middle" fill="red">Autumn</text>
+          <text x="468.75" y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
+
+          <!-- Paths for cost and solar curves -->
+          <path id="costPath" fill="none" stroke="steelblue" stroke-width="2" />
+          <path id="solarPath" fill="none" stroke="tomato" stroke-width="2" />
+          <!-- Group for dynamic data labels -->
+          <g id="dataLabels"></g>
+        </g>
+      </defs>
+      <!-- Duplicate the chart content for seamless scrolling -->
+      <g class="scrolling">
+        <use href="#chartContent" x="0" y="0"></use>
+        <use href="#chartContent" x="500" y="0"></use>
+      </g>
     </svg>
+    <div id="pageTitle">Solar Profile Quoting System</div>
   </header>
 
   <div class="container">
-    <!-- Input Form Section -->
-    <section class="input-form">
-      <h2>Enter Your Details</h2>
-      <form id="solarForm">
-        <label for="electricityBill">Electricity Bill ($):</label>
-        <input type="number" id="electricityBill" name="electricityBill" required />
-        <label for="location">Location:</label>
-        <input type="text" id="location" name="location" required />
-        <button type="submit">Calculate</button>
+    <!-- Step 1: Seasonal Electricity Costs -->
+    <section id="step1" class="active">
+      <h2>Enter Your Seasonal Electricity Costs</h2>
+      <form id="seasonForm">
+        <label for="winterCost">Winter Electricity Cost ($):</label>
+        <input type="number" id="winterCost" required />
+        <label for="springCost">Spring Electricity Cost ($):</label>
+        <input type="number" id="springCost" required />
+        <label for="summerCost">Summer Electricity Cost ($):</label>
+        <input type="number" id="summerCost" required />
+        <label for="autumnCost">Autumn Electricity Cost ($):</label>
+        <input type="number" id="autumnCost" required />
+        <button type="button" onclick="handleSeasonalCosts()">Continue</button>
       </form>
     </section>
 
-    <!-- Results Section -->
-    <section class="results">
-      <h2>Results</h2>
-      <div id="resultsContent">
-        <!-- Dynamic results will be inserted here -->
-      </div>
+    <!-- Step 2: Location -->
+    <section id="step2">
+      <h2>Enter Your Location</h2>
+      <form id="locationForm">
+        <label for="location">Location:</label>
+        <input type="text" id="location" required />
+        <button type="button" onclick="handleLocation()">Continue</button>
+      </form>
     </section>
 
-    <!-- Example Quote Section -->
-    <section class="quote">
+    <!-- Step 3: Example Quote -->
+    <section id="step3">
       <h2>Example Quote</h2>
-      <p id="quoteContent">Your solar panel configuration will appear here as a quote.</p>
+      <div id="quoteContent"></div>
+      <button type="button" onclick="goToStep('step4')">Continue</button>
     </section>
 
-    <!-- Contact Us Section -->
-    <section class="contact">
+    <!-- Step 4: Contact Us -->
+    <section id="step4">
       <h2>Contact Us</h2>
       <form id="contactForm">
         <label for="contactName">Name:</label>
-        <input type="text" id="contactName" name="contactName" required />
+        <input type="text" id="contactName" required />
         <label for="contactEmail">Email:</label>
-        <input type="email" id="contactEmail" name="contactEmail" required />
+        <input type="email" id="contactEmail" required />
         <label for="contactMessage">Message:</label>
-        <textarea id="contactMessage" name="contactMessage" rows="4" required></textarea>
-        <button type="submit">Send Message</button>
+        <textarea id="contactMessage" rows="4" required></textarea>
+        <button type="button" onclick="submitContact()">Continue</button>
       </form>
+    </section>
+
+    <!-- Step 5: Thank You -->
+    <section id="step5">
+      <h2>Thank You!</h2>
+      <p>Thank you for using our Solar Profile Quoting System. We will be in touch soon.</p>
     </section>
   </div>
 
   <script>
-    // JavaScript to handle form submission and dynamic updates
+    // Global object to store user data
+    let userData = {};
 
-    // Listen for the main solar form submission
-    document.getElementById('solarForm').addEventListener('submit', function(event) {
-      event.preventDefault();
+    // Conversion factor and sunlight modifiers for each season
+    const baseConversion = 0.2;
+    const sunlightFactors = {
+      winter: 1.2,
+      spring: 1.0,
+      summer: 0.8,
+      autumn: 1.0
+    };
 
-      var bill = document.getElementById('electricityBill').value;
-      var location = document.getElementById('location').value;
+    // Step 1: Save seasonal cost data
+    function handleSeasonalCosts() {
+      const winter = parseFloat(document.getElementById('winterCost').value);
+      const spring = parseFloat(document.getElementById('springCost').value);
+      const summer = parseFloat(document.getElementById('summerCost').value);
+      const autumn = parseFloat(document.getElementById('autumnCost').value);
+      if ([winter, spring, summer, autumn].some(v => isNaN(v))) {
+        alert("Please fill in all seasonal cost fields.");
+        return;
+      }
+      userData.winterCost = winter;
+      userData.springCost = spring;
+      userData.summerCost = summer;
+      userData.autumnCost = autumn;
+      goToStep('step2');
+    }
 
-      // Placeholder calculation for solar requirements
-      var solarRequirement = (bill * 0.2).toFixed(2);
-
-      // Update the results section with a dynamic message
-      document.getElementById('resultsContent').innerHTML = 
-        '<p>Based on an electricity bill of $' + bill + ' in ' + location + ', you might need approximately ' + solarRequirement + ' kW of solar panels.</p>';
-
-      // Dynamically update the header title with the user's location
-      document.getElementById('headerTitle').textContent = 'Solar Profile for ' + location;
-
-      // Update the example quote section with a modular quote
+    // Step 2: Save location and calculate seasonal solar requirements
+    function handleLocation() {
+      const loc = document.getElementById('location').value;
+      if (!loc) {
+        alert("Please enter your location.");
+        return;
+      }
+      userData.location = loc;
+      // Update page title with location
+      document.getElementById('pageTitle').textContent = 'Solar Profile for ' + loc;
+      // Calculate seasonal solar requirement (formula can be adjusted)
+      userData.solarRequirements = {
+        winter: userData.winterCost * baseConversion * sunlightFactors.winter,
+        spring: userData.springCost * baseConversion * sunlightFactors.spring,
+        summer: userData.summerCost * baseConversion * sunlightFactors.summer,
+        autumn: userData.autumnCost * baseConversion * sunlightFactors.autumn
+      };
+      // Update the quote text in Step 3
       document.getElementById('quoteContent').innerHTML = 
-        '<strong>Quote:</strong> For ' + location + ', we recommend our modular solar panel package starting at $' + (solarRequirement * 1000).toFixed(2);
-    });
+        `<strong>Quote:</strong> For ${userData.location}, recommended seasonal solar capacities (in kW) are:<br>
+         Winter: ${userData.solarRequirements.winter.toFixed(2)}, 
+         Spring: ${userData.solarRequirements.spring.toFixed(2)}, 
+         Summer: ${userData.solarRequirements.summer.toFixed(2)}, 
+         Autumn: ${userData.solarRequirements.autumn.toFixed(2)}.`;
+      updateHeaderChart();
+      goToStep('step3');
+    }
 
-    // Handle the contact form submission
-    document.getElementById('contactForm').addEventListener('submit', function(event) {
-      event.preventDefault();
-      alert('Thank you for contacting us! We will get back to you soon.');
-      // Optionally, clear the form fields after submission
-      document.getElementById('contactForm').reset();
-    });
+    // Transition between steps
+    function goToStep(stepId) {
+      document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+      const next = document.getElementById(stepId);
+      if (next) next.classList.add('active');
+    }
+
+    // Generate a smooth path using quadratic curves.
+    function generateSmoothPath(points) {
+      if (points.length < 2) return "";
+      let d = "M" + points[0].x + "," + points[0].y;
+      for (let i = 1; i < points.length; i++) {
+        const midX = (points[i-1].x + points[i].x) / 2;
+        const midY = (points[i-1].y + points[i].y) / 2;
+        d += " Q " + points[i-1].x + "," + points[i-1].y + " " + midX + "," + midY;
+      }
+      return d;
+    }
+
+    // Update the header chart with combined cost and solar curves plus data labels.
+    // We start in the middle of the first Winter box (x=31.25) and end in the middle
+    // of the last Winter box (x=468.75). Then we add a final point at x=31.25+500=531.25
+    // to line up with the next iteration.
+    function updateHeaderChart() {
+      // X positions for the 5 main season centers (partial winter at start, spring, summer, autumn, partial winter at end):
+      const mainCenters = [31.25, 125, 250, 375, 468.75];
+      // A final duplication of the first point + 500 = 31.25 + 500 = 531.25
+      // ensures that when the chart scrolls, the end of the first copy lines up with the start of the second.
+      const extendedCenters = mainCenters.concat([31.25 + 500]);
+
+      // Build data arrays for cost & solar
+      const costData = [
+        userData.winterCost,
+        userData.springCost,
+        userData.summerCost,
+        userData.autumnCost,
+        userData.winterCost  // partial winter at end
+      ];
+      const solarData = [
+        userData.solarRequirements.winter,
+        userData.solarRequirements.spring,
+        userData.solarRequirements.summer,
+        userData.solarRequirements.autumn,
+        userData.solarRequirements.winter
+      ];
+      // Append the duplicate first point
+      costData.push(userData.winterCost);
+      solarData.push(userData.solarRequirements.winter);
+
+      // For vertical scaling, let's treat the entire viewBox as 100 in height
+      // minus a small top/bottom margin so we don't clip the line.
+      const height = 100;
+      const marginTop = 10, marginBottom = 10;
+      const plotHeight = height - marginTop - marginBottom;
+      // Max across both data sets
+      const maxVal = Math.max(...costData, ...solarData);
+
+      let costPoints = [], solarPoints = [];
+      for (let i = 0; i < extendedCenters.length; i++) {
+        const x = extendedCenters[i];
+        const yCost = marginTop + (plotHeight - (costData[i] / maxVal * plotHeight));
+        const ySolar = marginTop + (plotHeight - (solarData[i] / maxVal * plotHeight));
+        costPoints.push({ x, y: yCost });
+        solarPoints.push({ x, y: ySolar });
+      }
+
+      // Generate smooth paths
+      const costPathStr = generateSmoothPath(costPoints);
+      const solarPathStr = generateSmoothPath(solarPoints);
+
+      document.getElementById('costPath').setAttribute('d', costPathStr);
+      document.getElementById('solarPath').setAttribute('d', solarPathStr);
+
+      // Remove existing data labels
+      const labelsGroup = document.getElementById('dataLabels');
+      while (labelsGroup.firstChild) {
+        labelsGroup.removeChild(labelsGroup.firstChild);
+      }
+
+      // Add data labels for each of the 5 main season points (not the final duplicate)
+      const svgNS = "http://www.w3.org/2000/svg";
+      for (let i = 0; i < mainCenters.length; i++) {
+        // Cost label (above)
+        const costLabel = document.createElementNS(svgNS, "text");
+        costLabel.setAttribute("x", costPoints[i].x.toString());
+        costLabel.setAttribute("y", (costPoints[i].y - 5).toString());
+        costLabel.setAttribute("font-size", "10");
+        costLabel.setAttribute("fill", "steelblue");
+        costLabel.setAttribute("text-anchor", "middle");
+        costLabel.textContent = costData[i].toString();
+        labelsGroup.appendChild(costLabel);
+
+        // Solar label (below)
+        const solarLabel = document.createElementNS(svgNS, "text");
+        solarLabel.setAttribute("x", solarPoints[i].x.toString());
+        solarLabel.setAttribute("y", (solarPoints[i].y + 15).toString());
+        solarLabel.setAttribute("font-size", "10");
+        solarLabel.setAttribute("fill", "tomato");
+        solarLabel.setAttribute("text-anchor", "middle");
+        solarLabel.textContent = solarData[i].toFixed(2);
+        labelsGroup.appendChild(solarLabel);
+      }
+    }
+
+    // Handle contact form submission (Step 4)
+    function submitContact() {
+      const name = document.getElementById('contactName').value;
+      const email = document.getElementById('contactEmail').value;
+      const message = document.getElementById('contactMessage').value;
+      if (!name || !email || !message) {
+        alert("Please fill in all contact fields.");
+        return;
+      }
+      console.log("Contact submission:", { name, email, message });
+      goToStep('step5');
+    }
   </script>
 </body>
 </html>
-
