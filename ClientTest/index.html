@@ -12,38 +12,72 @@
       padding: 0;
       background: #f5f5f5;
     }
-    /* Header styling */
+    /* Fixed header styling */
     header {
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
       background: #333;
       color: #fff;
       overflow: hidden;
+      z-index: 1000;
     }
-    /* Animated SVG header chart */
+    /* Animated SVG header chart with fade masks on the edges */
     #headerChart {
       display: block;
       width: 100%;
-      height: 120px; /* Adjust height as needed */
+      height: 120px;
+      mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
     }
-    /* Scrolling group that duplicates the content */
+    /* The scrolling group (triple cycle) */
     .scrolling {
-      animation: scroll 15s linear infinite; /* 15s for slower scroll */
+      transform: translateX(-500px); /* Center cycle visible */
+      animation: scroll 15s linear infinite;
     }
     @keyframes scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-500px); }
+      0% { transform: translateX(-500px); }
+      100% { transform: translateX(-1000px); }
     }
-    /* Page title positioned below the animated chart */
+    /* Page title below the SVG header */
     #pageTitle {
       text-align: center;
       padding: 0.5rem;
       background: #444;
       font-size: 1.5rem;
     }
+    /* Legend styling: positioned fixed at the top right under the header */
+    #legend {
+      position: fixed;
+      top: 130px;  /* header (120px) + some gap */
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1001;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .legend-item:last-child {
+      margin-bottom: 0;
+    }
+    .legend-color {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 6px;
+      border: 1px solid #fff;
+    }
     /* Container for multi-step content */
     .container {
       max-width: 800px;
-      margin: 2rem auto;
+      margin: 150px auto 2rem;  /* add top margin so content isn't hidden by fixed header */
       background: #fff;
       padding: 2rem;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -59,51 +93,42 @@
       padding: 0.5rem;
       margin-bottom: 1rem;
     }
+    /* Style for month labels */
+    .month-label {
+      font-size: 10px;
+      fill: #fff;
+      text-anchor: middle;
+    }
   </style>
 </head>
 <body>
-  <!-- Header: Animated chart on top, then page title -->
+  <!-- Header with animated, seamlessly looping polyline -->
   <header>
     <svg id="headerChart" viewBox="0 0 500 100" preserveAspectRatio="none">
       <defs>
-        <!-- We define partial and full season boxes so that Winter is split. -->
-        <!-- Each "half" of Winter is 62.5px, while Spring/Summer/Autumn are 125px. -->
-        <!-- This way the line can start in mid-Winter (x=31.25) and end in mid-Winter (x=468.75). -->
-        <!-- Colors: winter=blue, spring=green, summer=orange, autumn=red -->
-        <g id="chartContent">
-          <!-- 1) Half Winter (start) = 0 to 62.5 -->
-          <rect x="0" y="10" width="62.5" height="80" fill="blue" fill-opacity="0.5"/>
-          <!-- 2) Spring = 62.5 to 187.5 -->
-          <rect x="62.5" y="10" width="125" height="80" fill="green" fill-opacity="0.5"/>
-          <!-- 3) Summer = 187.5 to 312.5 -->
-          <rect x="187.5" y="10" width="125" height="80" fill="orange" fill-opacity="0.5"/>
-          <!-- 4) Autumn = 312.5 to 437.5 -->
-          <rect x="312.5" y="10" width="125" height="80" fill="red" fill-opacity="0.5"/>
-          <!-- 5) Half Winter (end) = 437.5 to 500 -->
-          <rect x="437.5" y="10" width="62.5" height="80" fill="blue" fill-opacity="0.5"/>
-
-          <!-- Season labels above the boxes -->
-          <text x="31.25"  y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
-          <text x="125"    y="8" font-size="12" text-anchor="middle" fill="green">Spring</text>
-          <text x="250"    y="8" font-size="12" text-anchor="middle" fill="orange">Summer</text>
-          <text x="375"    y="8" font-size="12" text-anchor="middle" fill="red">Autumn</text>
-          <text x="468.75" y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
-
-          <!-- Paths for cost and solar curves -->
-          <path id="costPath" fill="none" stroke="steelblue" stroke-width="2" />
-          <path id="solarPath" fill="none" stroke="tomato" stroke-width="2" />
-          <!-- Group for dynamic data labels -->
-          <g id="dataLabels"></g>
-        </g>
+        <!-- We'll generate our polyline (and month labels will be added later) via JavaScript. -->
       </defs>
-      <!-- Duplicate the chart content for seamless scrolling -->
-      <g class="scrolling">
-        <use href="#chartContent" x="0" y="0"></use>
-        <use href="#chartContent" x="500" y="0"></use>
+      <!-- The scrolling group contains three identical cycles -->
+      <g class="scrolling" id="tripleCycle">
+        <!-- The polyline paths for cost and solar will be placed here by JavaScript -->
+        <path id="costPath" fill="none" stroke="steelblue" stroke-width="2" />
+        <path id="solarPath" fill="none" stroke="tomato" stroke-width="2" />
       </g>
+      <!-- Static month labels for the center cycle (from x=500 to x=1000) -->
+      <g id="monthLabels"></g>
     </svg>
     <div id="pageTitle">Solar Profile Quoting System</div>
   </header>
+
+  <!-- Legend at top right -->
+  <div id="legend">
+    <div class="legend-item">
+      <span class="legend-color" style="background: steelblue;"></span> Electricity Bill
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background: tomato;"></span> Solar Requirement
+    </div>
+  </div>
 
   <div class="container">
     <!-- Step 1: Seasonal Electricity Costs -->
@@ -161,52 +186,28 @@
   </div>
 
   <script>
-    // Global object to store user data
+    /* --- Global Variables & Data --- */
     let userData = {};
-
-    // Conversion factor and sunlight modifiers for each season
     const baseConversion = 0.2;
-    const sunlightFactors = {
-      winter: 1.2,
-      spring: 1.0,
-      summer: 0.8,
-      autumn: 1.0
-    };
-
-    // Array of random customer names
+    const sunlightFactors = { winter: 1.2, spring: 1.0, summer: 0.8, autumn: 1.0 };
     const customerNames = ["John Doe", "Jane Smith", "Alex Johnson", "Emily Davis", "Michael Brown"];
-
-    // Example modular solar setups
     const solarSetups = [
-      {
-        name: "Basic 3kW Starter Kit",
-        description: "8 x 375W panels, 3kW inverter, basic racking system",
-        baseCost: 3000
-      },
-      {
-        name: "Advanced 6kW System",
-        description: "15 x 400W panels, 6kW inverter, battery-ready design",
-        baseCost: 6000
-      },
-      {
-        name: "Premium 10kW Package",
-        description: "25 x 400W panels, 10kW hybrid inverter, optional battery add-on",
-        baseCost: 10000
-      },
-      {
-        name: "Off-Grid 5kW Setup",
-        description: "12 x 420W panels, 5kW hybrid inverter, 10kWh battery storage",
-        baseCost: 9000
-      }
+      { name: "Basic 3kW Starter Kit", description: "8 x 375W panels, 3kW inverter, basic racking system", baseCost: 3000 },
+      { name: "Advanced 6kW System", description: "15 x 400W panels, 6kW inverter, battery-ready design", baseCost: 6000 },
+      { name: "Premium 10kW Package", description: "25 x 400W panels, 10kW hybrid inverter, optional battery add-on", baseCost: 10000 },
+      { name: "Off-Grid 5kW Setup", description: "12 x 420W panels, 5kW hybrid inverter, 10kWh battery storage", baseCost: 9000 }
     ];
-
-    // Helper to pick a random solar setup
     function getRandomSetup() {
-      const idx = Math.floor(Math.random() * solarSetups.length);
-      return solarSetups[idx];
+      return solarSetups[Math.floor(Math.random() * solarSetups.length)];
     }
 
-    // Step 1: Save seasonal cost data
+    /* --- Multi-Step Form Handlers --- */
+    function goToStep(stepId) {
+      document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+      const next = document.getElementById(stepId);
+      if (next) next.classList.add('active');
+    }
+
     function handleSeasonalCosts() {
       const winter = parseFloat(document.getElementById('winterCost').value);
       const spring = parseFloat(document.getElementById('springCost').value);
@@ -223,7 +224,6 @@
       goToStep('step2');
     }
 
-    // Step 2: Save location, select a random customer name, and calculate seasonal solar requirements
     function handleLocation() {
       const loc = document.getElementById('location').value;
       if (!loc) {
@@ -231,16 +231,11 @@
         return;
       }
       userData.location = loc;
-      // Use location as customer address
       userData.customerAddress = loc;
-      // Select a random customer name
-      const randomIdx = Math.floor(Math.random() * customerNames.length);
-      userData.customerName = customerNames[randomIdx];
-
-      // Update page title with location
+      userData.customerName = customerNames[Math.floor(Math.random() * customerNames.length)];
       document.getElementById('pageTitle').textContent = 'Solar Profile for ' + loc;
 
-      // Calculate seasonal solar requirements (formula can be adjusted)
+      // Calculate seasonal solar requirements
       userData.solarRequirements = {
         winter: userData.winterCost * baseConversion * sunlightFactors.winter,
         spring: userData.springCost * baseConversion * sunlightFactors.spring,
@@ -248,16 +243,12 @@
         autumn: userData.autumnCost * baseConversion * sunlightFactors.autumn
       };
 
-      // Compute an "average" required capacity (for simplicity)
-      const avgCapacity = (
-        userData.solarRequirements.winter +
-        userData.solarRequirements.spring +
-        userData.solarRequirements.summer +
-        userData.solarRequirements.autumn
-      ) / 4;
+      const avgCapacity = (userData.solarRequirements.winter +
+                           userData.solarRequirements.spring +
+                           userData.solarRequirements.summer +
+                           userData.solarRequirements.autumn) / 4;
       userData.averageCapacity = avgCapacity;
 
-      // Choose a random solar setup and scale cost by (avgCapacity/5)
       const chosenSetup = getRandomSetup();
       const scaleFactor = Math.max(1, avgCapacity / 5);
       const totalCost = (chosenSetup.baseCost * scaleFactor).toFixed(2);
@@ -267,14 +258,14 @@
       updateHeaderChart();
       goToStep('step3');
 
-      // Compute today's date in dd/mm/yyyy format
+      // Get today's date in dd/mm/yyyy format
       const today = new Date();
       const dd = String(today.getDate()).padStart(2, '0');
-      const mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
       const yyyy = today.getFullYear();
       const formattedDate = dd + '/' + mm + '/' + yyyy;
 
-      // Update the Example Quote section with professional-looking quote details
+      // Update the Quote section with professional details
       document.getElementById('quoteContent').innerHTML = `
         <h3>PHNXX Pte. Ltd.</h3>
         <p>
@@ -327,14 +318,19 @@
       `;
     }
 
-    // Transition between steps
-    function goToStep(stepId) {
-      document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
-      const next = document.getElementById(stepId);
-      if (next) next.classList.add('active');
+    function submitContact() {
+      const name = document.getElementById('contactName').value;
+      const email = document.getElementById('contactEmail').value;
+      const message = document.getElementById('contactMessage').value;
+      if (!name || !email || !message) {
+        alert("Please fill in all contact fields.");
+        return;
+      }
+      console.log("Contact submission:", { name, email, message });
+      goToStep('step5');
     }
 
-    // Generate a smooth path using quadratic curves.
+    /* --- Polyline & Animation for Looping Header --- */
     function generateSmoothPath(points) {
       if (points.length < 2) return "";
       let d = "M" + points[0].x + "," + points[0].y;
@@ -346,99 +342,75 @@
       return d;
     }
 
-    // Force the last point's Y to match the first point's Y for seamless looping.
-    function forceEndToMatchStart(points) {
-      if (points.length < 2) return points;
-      points[points.length - 1].y = points[0].y;
-      return points;
-    }
-
-    // Update the header chart with combined cost and solar curves plus data labels.
-    // The curve starts at the center of the first Winter box (x=31.25) and ends at the center of the last Winter box (x=468.75).
-    // Then we add a final point at x=31.25+500 = 531.25 to ensure seamless connection.
     function updateHeaderChart() {
-      const mainCenters = [31.25, 125, 250, 375, 468.75];
-      const extendedCenters = mainCenters.concat([31.25 + 500]);
-
-      const costData = [
-        userData.winterCost,
-        userData.springCost,
-        userData.summerCost,
-        userData.autumnCost,
-        userData.winterCost  // partial winter at end
-      ];
-      const solarData = [
-        userData.solarRequirements.winter,
-        userData.solarRequirements.spring,
-        userData.solarRequirements.summer,
-        userData.solarRequirements.autumn,
-        userData.solarRequirements.winter
-      ];
-      costData.push(userData.winterCost);
-      solarData.push(userData.solarRequirements.winter);
-
-      const height = 100;
-      const marginTop = 20;
-      const marginBottom = 10;
-      const plotHeight = height - marginTop - marginBottom;
-      const maxVal = Math.max(...costData, ...solarData);
-
-      let costPoints = [], solarPoints = [];
-      for (let i = 0; i < extendedCenters.length; i++) {
-        const x = extendedCenters[i];
-        const yCost = marginTop + (plotHeight - (costData[i] / maxVal * plotHeight));
-        const ySolar = marginTop + (plotHeight - (solarData[i] / maxVal * plotHeight));
-        costPoints.push({ x, y: yCost });
-        solarPoints.push({ x, y: ySolar });
+      // Generate monthly data arrays from seasonal inputs.
+      let monthlyCost = [];
+      let monthlySolar = [];
+      for (let m = 0; m < 12; m++) {
+        if (m < 3) {
+          monthlyCost.push(userData.winterCost);
+          monthlySolar.push(userData.solarRequirements.winter);
+        } else if (m < 6) {
+          monthlyCost.push(userData.springCost);
+          monthlySolar.push(userData.solarRequirements.spring);
+        } else if (m < 9) {
+          monthlyCost.push(userData.summerCost);
+          monthlySolar.push(userData.solarRequirements.summer);
+        } else {
+          monthlyCost.push(userData.autumnCost);
+          monthlySolar.push(userData.solarRequirements.autumn);
+        }
       }
-
-      costPoints = forceEndToMatchStart(costPoints);
-      solarPoints = forceEndToMatchStart(solarPoints);
-
+      const periodWidth = 500;
+      const numPoints = 12;
+      let cycleCostPoints = [];
+      let cycleSolarPoints = [];
+      for (let m = 0; m < numPoints; m++) {
+        const x = m * (periodWidth / (numPoints - 1));
+        cycleCostPoints.push({ x: x, y: monthlyCost[m] });
+        cycleSolarPoints.push({ x: x, y: monthlySolar[m] });
+      }
+      // Force closure: make last point's y match the first's.
+      cycleCostPoints[numPoints - 1].y = cycleCostPoints[0].y;
+      cycleSolarPoints[numPoints - 1].y = cycleSolarPoints[0].y;
+      
+      // Replicate the cycle three times for seamless scrolling
+      let costPoints = [];
+      let solarPoints = [];
+      for (let cycle = 0; cycle < 3; cycle++) {
+        for (let i = 0; i < cycleCostPoints.length; i++) {
+          costPoints.push({ x: cycle * periodWidth + cycleCostPoints[i].x, y: cycleCostPoints[i].y });
+          solarPoints.push({ x: cycle * periodWidth + cycleSolarPoints[i].x, y: cycleSolarPoints[i].y });
+        }
+      }
+      const svgHeight = 100;
+      const marginTop = 20, marginBottom = 20;
+      const plotHeight = svgHeight - marginTop - marginBottom;
+      const allValues = costPoints.map(p => p.y).concat(solarPoints.map(p => p.y));
+      const maxVal = Math.max(...allValues);
+      costPoints = costPoints.map(p => ({ x: p.x, y: marginTop + (plotHeight - (p.y / maxVal * plotHeight)) }));
+      solarPoints = solarPoints.map(p => ({ x: p.x, y: marginTop + (plotHeight - (p.y / maxVal * plotHeight)) }));
+      
       const costPathStr = generateSmoothPath(costPoints);
       const solarPathStr = generateSmoothPath(solarPoints);
-
       document.getElementById('costPath').setAttribute('d', costPathStr);
       document.getElementById('solarPath').setAttribute('d', solarPathStr);
-
-      const labelsGroup = document.getElementById('dataLabels');
-      while (labelsGroup.firstChild) {
-        labelsGroup.removeChild(labelsGroup.firstChild);
+      
+      // Update month labels for the center cycle (x:500 to 1000)
+      const monthLabelsGroup = document.getElementById('monthLabels');
+      while (monthLabelsGroup.firstChild) {
+        monthLabelsGroup.removeChild(monthLabelsGroup.firstChild);
       }
-
-      const svgNS = "http://www.w3.org/2000/svg";
-      for (let i = 0; i < mainCenters.length; i++) {
-        const costLabel = document.createElementNS(svgNS, "text");
-        costLabel.setAttribute("x", costPoints[i].x.toString());
-        costLabel.setAttribute("y", (costPoints[i].y - 10).toString());
-        costLabel.setAttribute("font-size", "10");
-        costLabel.setAttribute("fill", "steelblue");
-        costLabel.setAttribute("text-anchor", "middle");
-        costLabel.textContent = costData[i].toString();
-        labelsGroup.appendChild(costLabel);
-
-        const solarLabel = document.createElementNS(svgNS, "text");
-        solarLabel.setAttribute("x", solarPoints[i].x.toString());
-        solarLabel.setAttribute("y", (solarPoints[i].y + 20).toString());
-        solarLabel.setAttribute("font-size", "10");
-        solarLabel.setAttribute("fill", "tomato");
-        solarLabel.setAttribute("text-anchor", "middle");
-        solarLabel.textContent = solarData[i].toFixed(2);
-        labelsGroup.appendChild(solarLabel);
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      for (let m = 0; m < 12; m++) {
+        const x = 500 + (m + 0.5) * (periodWidth / 12);
+        const textElem = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        textElem.setAttribute("x", x);
+        textElem.setAttribute("y", svgHeight - marginBottom/2);
+        textElem.setAttribute("class", "month-label");
+        textElem.textContent = months[m];
+        monthLabelsGroup.appendChild(textElem);
       }
-    }
-
-    // Handle contact form submission (Step 4)
-    function submitContact() {
-      const name = document.getElementById('contactName').value;
-      const email = document.getElementById('contactEmail').value;
-      const message = document.getElementById('contactMessage').value;
-      if (!name || !email || !message) {
-        alert("Please fill in all contact fields.");
-        return;
-      }
-      console.log("Contact submission:", { name, email, message });
-      goToStep('step5');
     }
   </script>
 </body>
