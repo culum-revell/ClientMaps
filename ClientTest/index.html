@@ -69,7 +69,6 @@
         <!-- We define partial and full season boxes so that Winter is split. -->
         <!-- Each "half" of Winter is 62.5px, while Spring/Summer/Autumn are 125px. -->
         <!-- This way the line can start in mid-Winter (x=31.25) and end in mid-Winter (x=468.75). -->
-        
         <!-- Colors: winter=blue, spring=green, summer=orange, autumn=red -->
         <g id="chartContent">
           <!-- 1) Half Winter (start) = 0 to 62.5 -->
@@ -83,7 +82,7 @@
           <!-- 5) Half Winter (end) = 437.5 to 500 -->
           <rect x="437.5" y="10" width="62.5" height="80" fill="blue" fill-opacity="0.5"/>
 
-          <!-- Season labels above the boxes. Two half-Winters => two Winter labels. -->
+          <!-- Season labels above the boxes -->
           <text x="31.25"  y="8" font-size="12" text-anchor="middle" fill="blue">Winter</text>
           <text x="125"    y="8" font-size="12" text-anchor="middle" fill="green">Spring</text>
           <text x="250"    y="8" font-size="12" text-anchor="middle" fill="orange">Summer</text>
@@ -127,7 +126,7 @@
     <section id="step2">
       <h2>Enter Your Location</h2>
       <form id="locationForm">
-        <label for="location">Location:</label>
+        <label for="location">Location (Address):</label>
         <input type="text" id="location" required />
         <button type="button" onclick="handleLocation()">Continue</button>
       </form>
@@ -174,6 +173,39 @@
       autumn: 1.0
     };
 
+    // Array of random customer names
+    const customerNames = ["John Doe", "Jane Smith", "Alex Johnson", "Emily Davis", "Michael Brown"];
+
+    // Example modular solar setups
+    const solarSetups = [
+      {
+        name: "Basic 3kW Starter Kit",
+        description: "8 x 375W panels, 3kW inverter, basic racking system",
+        baseCost: 3000
+      },
+      {
+        name: "Advanced 6kW System",
+        description: "15 x 400W panels, 6kW inverter, battery-ready design",
+        baseCost: 6000
+      },
+      {
+        name: "Premium 10kW Package",
+        description: "25 x 400W panels, 10kW hybrid inverter, optional battery add-on",
+        baseCost: 10000
+      },
+      {
+        name: "Off-Grid 5kW Setup",
+        description: "12 x 420W panels, 5kW hybrid inverter, 10kWh battery storage",
+        baseCost: 9000
+      }
+    ];
+
+    // Helper to pick a random solar setup
+    function getRandomSetup() {
+      const idx = Math.floor(Math.random() * solarSetups.length);
+      return solarSetups[idx];
+    }
+
     // Step 1: Save seasonal cost data
     function handleSeasonalCosts() {
       const winter = parseFloat(document.getElementById('winterCost').value);
@@ -191,7 +223,7 @@
       goToStep('step2');
     }
 
-    // Step 2: Save location and calculate seasonal solar requirements
+    // Step 2: Save location, select a random customer name, and calculate seasonal solar requirements
     function handleLocation() {
       const loc = document.getElementById('location').value;
       if (!loc) {
@@ -199,24 +231,100 @@
         return;
       }
       userData.location = loc;
+      // Use location as customer address
+      userData.customerAddress = loc;
+      // Select a random customer name
+      const randomIdx = Math.floor(Math.random() * customerNames.length);
+      userData.customerName = customerNames[randomIdx];
+
       // Update page title with location
       document.getElementById('pageTitle').textContent = 'Solar Profile for ' + loc;
-      // Calculate seasonal solar requirement (formula can be adjusted)
+
+      // Calculate seasonal solar requirements (formula can be adjusted)
       userData.solarRequirements = {
         winter: userData.winterCost * baseConversion * sunlightFactors.winter,
         spring: userData.springCost * baseConversion * sunlightFactors.spring,
         summer: userData.summerCost * baseConversion * sunlightFactors.summer,
         autumn: userData.autumnCost * baseConversion * sunlightFactors.autumn
       };
-      // Update the quote text in Step 3
-      document.getElementById('quoteContent').innerHTML = 
-        `<strong>Quote:</strong> For ${userData.location}, recommended seasonal solar capacities (in kW) are:<br>
-         Winter: ${userData.solarRequirements.winter.toFixed(2)}, 
-         Spring: ${userData.solarRequirements.spring.toFixed(2)}, 
-         Summer: ${userData.solarRequirements.summer.toFixed(2)}, 
-         Autumn: ${userData.solarRequirements.autumn.toFixed(2)}.`;
+
+      // Compute an "average" required capacity (for simplicity)
+      const avgCapacity = (
+        userData.solarRequirements.winter +
+        userData.solarRequirements.spring +
+        userData.solarRequirements.summer +
+        userData.solarRequirements.autumn
+      ) / 4;
+      userData.averageCapacity = avgCapacity;
+
+      // Choose a random solar setup and scale cost by (avgCapacity/5)
+      const chosenSetup = getRandomSetup();
+      const scaleFactor = Math.max(1, avgCapacity / 5);
+      const totalCost = (chosenSetup.baseCost * scaleFactor).toFixed(2);
+      userData.chosenSetup = chosenSetup;
+      userData.setupCost = totalCost;
+
       updateHeaderChart();
       goToStep('step3');
+
+      // Compute today's date in dd/mm/yyyy format
+      const today = new Date();
+      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+      const yyyy = today.getFullYear();
+      const formattedDate = dd + '/' + mm + '/' + yyyy;
+
+      // Update the Example Quote section with professional-looking quote details
+      document.getElementById('quoteContent').innerHTML = `
+        <h3>PHNXX Pte. Ltd.</h3>
+        <p>
+          121 King St, Melbourne VIC 3000<br>
+          Tel: (555) 123-4567 | Contact: <a href="https://www.phnxx.io/contact" target="_blank" style="color:inherit;">https://www.phnxx.io/contact</a>
+        </p>
+        <p>
+          <strong>Quote Number:</strong> PHN-2025-001<br>
+          <strong>Date:</strong> ${formattedDate}
+        </p>
+        <p>
+          <strong>Customer:</strong><br>
+          ${userData.customerName}<br>
+          ${userData.customerAddress}
+        </p>
+        <hr>
+        <h4>Residential Solar Panel Installation Quote</h4>
+        <p>
+          <strong>Project Overview:</strong><br>
+          System Size: 5.5 kW (approx.)<br>
+          Number of Panels: 18 x 305W Polycrystalline Panels<br>
+          Inverter: 1 x 5.5 kW String Inverter<br>
+          Mounting System: Roof-mounted, non-penetrating racking system<br>
+          Estimated Annual Production: ~7,200 kWh/year
+        </p>
+        <p>
+          <strong>Equipment & Installation Costs:</strong>
+        </p>
+        <ul>
+          <li><strong>Solar Panels:</strong> 18 x 305W Polycrystalline Panels, Unit Price: $200 each, Total: $3,600</li>
+          <li><strong>Inverter:</strong> 5.5 kW String Inverter, Price: $1,200</li>
+          <li><strong>Mounting & Racking:</strong> Roof-mounted, non-penetrating racking system, Total: $800</li>
+          <li><strong>Electrical Components:</strong> Wiring, combiner boxes, conduit, Total: $600</li>
+          <li><strong>Installation Labor & Permitting:</strong> Design, installation, permits, Total: $1,500</li>
+        </ul>
+        <p>
+          <strong>Subtotal:</strong> $7,700<br>
+          <strong>Tax (8.5%):</strong> $654.50<br>
+          <strong>Total:</strong> $8,354.50
+        </p>
+        <p>
+          Note: Actual costs may vary based on site inspection, shipping to ${userData.location}, and final configuration.
+        </p>
+        <hr>
+        <p>
+          We also recommend our <strong>${userData.chosenSetup.name}</strong> setup:<br>
+          ${userData.chosenSetup.description}<br>
+          Estimated system cost based on your average requirement (${avgCapacity.toFixed(2)} kW): $${userData.setupCost}
+        </p>
+      `;
     }
 
     // Transition between steps
@@ -238,27 +346,20 @@
       return d;
     }
 
-    /**
-     * Simple function to force the last point's Y to match the first point's Y.
-     * This ensures the wave lines up exactly in vertical position from copy to copy.
-     */
+    // Force the last point's Y to match the first point's Y for seamless looping.
     function forceEndToMatchStart(points) {
       if (points.length < 2) return points;
-      points[points.length - 1].y = points[0].y; 
+      points[points.length - 1].y = points[0].y;
       return points;
     }
 
     // Update the header chart with combined cost and solar curves plus data labels.
-    // We start in the middle of the first Winter box (x=31.25) and end in the middle
-    // of the last Winter box (x=468.75). Then we add a final point at x=31.25+500=531.25
-    // to line up with the next iteration.
+    // The curve starts at the center of the first Winter box (x=31.25) and ends at the center of the last Winter box (x=468.75).
+    // Then we add a final point at x=31.25+500 = 531.25 to ensure seamless connection.
     function updateHeaderChart() {
-      // X positions for the 5 main season centers (partial winter at start, spring, summer, autumn, partial winter at end):
       const mainCenters = [31.25, 125, 250, 375, 468.75];
-      // A final duplication of the first point + 500 => 31.25 + 500 = 531.25
       const extendedCenters = mainCenters.concat([31.25 + 500]);
 
-      // Build data arrays for cost & solar
       const costData = [
         userData.winterCost,
         userData.springCost,
@@ -273,54 +374,42 @@
         userData.solarRequirements.autumn,
         userData.solarRequirements.winter
       ];
-      // Append the duplicate first data
       costData.push(userData.winterCost);
       solarData.push(userData.solarRequirements.winter);
 
-      // We expand margins so big labels aren't clipped
       const height = 100;
-      const marginTop = 20;  // more space on top for large labels
+      const marginTop = 20;
       const marginBottom = 10;
       const plotHeight = height - marginTop - marginBottom;
-
-      // Max across both data sets
       const maxVal = Math.max(...costData, ...solarData);
 
-      // Create points for cost & solar
       let costPoints = [], solarPoints = [];
       for (let i = 0; i < extendedCenters.length; i++) {
         const x = extendedCenters[i];
-        // Invert so higher values appear lower in the SVG
         const yCost = marginTop + (plotHeight - (costData[i] / maxVal * plotHeight));
         const ySolar = marginTop + (plotHeight - (solarData[i] / maxVal * plotHeight));
         costPoints.push({ x, y: yCost });
         solarPoints.push({ x, y: ySolar });
       }
 
-      // Force the last point to have the same Y as the first
       costPoints = forceEndToMatchStart(costPoints);
       solarPoints = forceEndToMatchStart(solarPoints);
 
-      // Generate smooth paths
       const costPathStr = generateSmoothPath(costPoints);
       const solarPathStr = generateSmoothPath(solarPoints);
 
       document.getElementById('costPath').setAttribute('d', costPathStr);
       document.getElementById('solarPath').setAttribute('d', solarPathStr);
 
-      // Remove existing data labels
       const labelsGroup = document.getElementById('dataLabels');
       while (labelsGroup.firstChild) {
         labelsGroup.removeChild(labelsGroup.firstChild);
       }
 
-      // Add data labels for each of the 5 main season points (not the final duplicate)
       const svgNS = "http://www.w3.org/2000/svg";
       for (let i = 0; i < mainCenters.length; i++) {
-        // Cost label (above the point)
         const costLabel = document.createElementNS(svgNS, "text");
         costLabel.setAttribute("x", costPoints[i].x.toString());
-        // Move label up a bit more so it doesn't collide with large data
         costLabel.setAttribute("y", (costPoints[i].y - 10).toString());
         costLabel.setAttribute("font-size", "10");
         costLabel.setAttribute("fill", "steelblue");
@@ -328,10 +417,8 @@
         costLabel.textContent = costData[i].toString();
         labelsGroup.appendChild(costLabel);
 
-        // Solar label (below the point)
         const solarLabel = document.createElementNS(svgNS, "text");
         solarLabel.setAttribute("x", solarPoints[i].x.toString());
-        // Move label down a bit more
         solarLabel.setAttribute("y", (solarPoints[i].y + 20).toString());
         solarLabel.setAttribute("font-size", "10");
         solarLabel.setAttribute("fill", "tomato");

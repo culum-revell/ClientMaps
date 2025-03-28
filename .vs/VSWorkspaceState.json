@@ -1,8 +1,13 @@
 {
   "ExpandedNodes": [
     "",
-    "\\MHE",
-    "\\MHE\\MHE_3D"
+    "\\.github",
+    "\\.github\\workflows",
+    "\\ClientTest",
+    "\\MDE",
+    "\\MHE\\MHE_3D",
+    "\\MHE\\MHE_3D\\models"
   ],
+  "SelectedNode": "\\ClientTest\\index.html",
   "PreviewInSolutionExplorer": false
 }
